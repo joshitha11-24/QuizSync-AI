@@ -4,11 +4,26 @@ import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
+import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Initialize Gemini lazily to avoid crashing on startup if key is missing
+let genAI: GoogleGenAI | null = null;
+function getGenAI() {
+  if (!genAI) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error("GEMINI_API_KEY environment variable is required");
+    }
+    genAI = new GoogleGenAI(key);
+  }
+  return genAI;
+}
+
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
@@ -16,6 +31,59 @@ const io = new Server(httpServer, {
 });
 
 app.use(express.json());
+
+// API Routes
+app.post("/api/generate-quiz", async (req, res) => {
+  const { topic, chapter, difficulty, numQuestions, language, isJEE_NEET } = req.body;
+  
+  try {
+    const aiClient = getGenAI();
+    let prompt = "";
+    if (isJEE_NEET) {
+      prompt = `Generate a ${difficulty} difficulty quiz for ${topic} (JEE/NEET level) with ${numQuestions} multiple choice questions.`;
+    } else {
+      prompt = `Generate a ${difficulty} difficulty quiz for ${topic}, specifically chapter ${chapter} for class 11th/12th, with ${numQuestions} multiple choice questions in ${language}.`;
+    }
+
+    prompt += ` Ensure the questions are accurate and options are distinct. Return exactly ${numQuestions} questions.`;
+
+    const model = aiClient.getGenerativeModel({
+      model: "gemini-1.5-flash",
+    });
+
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: { type: Type.STRING, description: "The quiz question text" },
+              options: { 
+                type: Type.ARRAY, 
+                items: { type: Type.STRING },
+                description: "Exactly 4 options" 
+              },
+              correctAnswer: { type: Type.STRING, description: "The correct option from the options array" }
+            },
+            required: ["question", "options", "correctAnswer"]
+          }
+        }
+      }
+    });
+
+    const response = await result.response;
+    const text = response.text();
+    if (!text) throw new Error("Empty response from AI");
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error("Gemini AI Error:", error);
+    const message = error instanceof Error ? error.message : "Failed to generate quiz questions using AI.";
+    res.status(500).json({ error: message });
+  }
+});
 
 // Socket.IO Logic
 const rooms = new Map(); // pin -> sessionData
