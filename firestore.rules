@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
+    // Quiz Rules
+    match /quizzes/{quizId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.adminId == request.auth.uid;
+    }
+
+    // Quiz Session Rules
+    match /quiz_sessions/{sessionId} {
+      allow read: if true; // Allow anyone to read session info (it's public anyway)
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+
+      match /participants/{participantId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+  }
+}

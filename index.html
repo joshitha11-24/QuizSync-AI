@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuizSync AI</title>
+    <script>
+      // Suppress expected "WebSocket closed without opened" errors from Vite HMR
+      // This environment disables HMR, but the Vite client still tries to connect.
+      (function() {
+        const suppress = (event) => {
+          const message = event.reason?.message || event.message || String(event.reason || '');
+          if (
+            message.includes('WebSocket closed without opened') || 
+            message.includes('failed to connect to websocket') ||
+            message.includes('WS_CLOSED_WITHOUT_OPENED')
+          ) {
+            event.preventDefault();
+            console.debug('[Vite] Suppressing expected HMR websocket error');
+          }
+        };
+        window.addEventListener('unhandledrejection', suppress);
+        window.addEventListener('error', suppress);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

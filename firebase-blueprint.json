@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "student"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A quiz template created by an admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "topic": { "type": "string" },
+        "chapter": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "numQuestions": { "type": "number" },
+        "language": { "type": "string" },
+        "adminId": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "string" }
+            }
+          }
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "timePerQuestion": { "type": "number" },
+            "marksPerQuestion": { "type": "number" },
+            "speedBonus": { "type": "boolean" },
+            "showLeaderboard": { "type": "boolean" },
+            "shuffleOptions": { "type": "boolean" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "topic", "adminId", "questions"]
+    },
+    "QuizSession": {
+      "title": "QuizSession",
+      "description": "A live quiz instance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "quizId": { "type": "string" },
+        "pin": { "type": "string" },
+        "status": { "type": "string", "enum": ["waiting", "active", "finished"] },
+        "currentQuestionIndex": { "type": "number" },
+        "adminId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["quizId", "pin", "status", "adminId"]
+    },
+    "Participant": {
+      "title": "Participant",
+      "description": "A student in a quiz session",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "score": { "type": "number" },
+        "lastAnswerCorrect": { "type": "boolean" },
+        "streak": { "type": "number" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "score"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Users collection"
+    },
+    "quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Quiz templates"
+    },
+    "quiz_sessions/{sessionId}": {
+      "schema": "QuizSession",
+      "description": "Active quiz sessions"
+    },
+    "quiz_sessions/{sessionId}/participants/{participantId}": {
+      "schema": "Participant",
+      "description": "Participants in a session"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "QuizSync AI",
+  "description": "An AI-powered real-time quiz platform with automatic question generation, live leaderboard, and student-teacher interaction.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
